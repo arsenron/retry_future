@@ -1,10 +1,10 @@
-use async_retry::*;
+use async_retry::{AsyncRetry, LinearRetryStrategy, RetryPolicy};
 use reqwest::StatusCode;
 use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let resp = FutureRetry::new(
+    let resp = AsyncRetry::new(
         || async {
             let resp = reqwest::get("http://localhost:8084").await?;
             if resp.status() == StatusCode::BAD_REQUEST {

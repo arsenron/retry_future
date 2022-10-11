@@ -1,14 +1,18 @@
-use crate::error::RetryError;
-use crate::retry_strategy::RetryStrategy;
-use crate::RetryPolicy;
-use futures::{ready, TryFuture};
-use pin_project::pin_project;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+
+use futures::{ready, TryFuture};
+use pin_project::pin_project;
 use tokio::time::sleep;
 
+use crate::error::RetryError;
+use crate::retry_strategy::RetryStrategy;
+use crate::RetryPolicy;
+
+/// Spawns a new `Future` by `new` method in case of
+/// error returned from a `Future`
 pub trait FutureFactory<E> {
     type Future: TryFuture<Error = RetryPolicy<E>>;
 
@@ -41,8 +45,15 @@ enum FutureState<Fut, Output> {
     NeedsPolling(Poll<Output>),
 }
 
+/// A future which is trying to resolve inner future
+/// until it exits successfully or return an [error](crate::error::RetryError).
+///
+/// The main point is that you handle all the logic **inside** your future
+/// and construct a helper type or use one of existing which implements
+/// [RetryStrategy](crate::retry_strategy::RetryStrategy) trait
+/// which is responsible for configuring retry mechanism
 #[pin_project]
-pub struct FutureRetry<F, E, RS>
+pub struct AsyncRetry<F, E, RS>
 where
     F: FutureFactory<E>,
     RS: RetryStrategy,
@@ -55,11 +66,16 @@ where
     phantom: PhantomData<E>,
 }
 
-impl<F, E, RS> FutureRetry<F, E, RS>
+impl<F, E, RS> AsyncRetry<F, E, RS>
 where
     F: FutureFactory<E>,
     RS: RetryStrategy,
 {
+    /// [FutureFactory](FutureFactory) has a blanket implementation
+    /// for FnMut closures. This means that you can pass a closure instead
+    /// of implementing [FutureFactory](FutureFactory) for your type.
+    ///
+    /// See examples to understand how to use this.
     pub fn new(mut factory: F, retry_strategy: RS) -> Self {
         let future = factory.new();
         Self {
@@ -72,7 +88,7 @@ where
     }
 }
 
-impl<F, E, RS> Future for FutureRetry<F, E, RS>
+impl<F, E, RS> Future for AsyncRetry<F, E, RS>
 where
     F: FutureFactory<E>,
     RS: RetryStrategy,
@@ -125,7 +141,7 @@ where
                     FutureState::WaitingForFuture { future: future_retry.factory.new() }
                 }
                 FutureStateProj::NeedsPolling(poll) => {
-                    // move from &mut T to original T
+                    // move from &mut T to original T. It is ok as we immediately return
                     let output = std::mem::replace(poll, Poll::Pending);
                     return output;
                 }

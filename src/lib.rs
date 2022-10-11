@@ -3,7 +3,7 @@ mod future;
 mod retry_strategy;
 
 pub use error::{RetryError, TimeoutError};
-pub use future::{FutureFactory, FutureRetry};
+pub use future::{AsyncRetry, FutureFactory};
 pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
 };
@@ -31,7 +31,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ok() {
-        let f = FutureRetry::new(
+        let f = AsyncRetry::new(
             || ok::<_, u8>(255).map_err(|_| RetryPolicy::Repeat::<String>),
             LinearRetryStrategy::default(),
         );
@@ -40,7 +40,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_error() {
-        let f = FutureRetry::new(
+        let f = AsyncRetry::new(
             || err::<u8, _>(RetryPolicy::Fail("fail")),
             LinearRetryStrategy::default().attempts(1),
         );
