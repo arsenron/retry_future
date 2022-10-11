@@ -42,6 +42,8 @@ enum FutureState<Fut, Output> {
         #[pin]
         delay: tokio::time::Sleep,
     },
+    /// When this enum variant is matched, we immediately return
+    /// from `poll`
     NeedsPolling(Poll<Output>),
 }
 
@@ -124,12 +126,9 @@ where
                                 FutureState::NeedsPolling(Poll::Ready(Err(RetryError::Fail(s))))
                             }
                             RetryPolicy::Any(any) => {
-                                move_to_next_state_depending_on_retry_strategy(Some(any.context(
-                                    format!(
-                                        "Failed after repeating {} times",
-                                        *future_retry.attempt
-                                    ),
-                                )))
+                                move_to_next_state_depending_on_retry_strategy(Some(
+                                    any.context(format!("Failed after repeating {attempt} times",)),
+                                ))
                             }
                         };
                         *future_retry.attempt += 1;
