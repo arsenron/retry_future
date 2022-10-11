@@ -1,5 +1,5 @@
-use reqwest::StatusCode;
 use async_retry::*;
+use reqwest::StatusCode;
 use std::time::Duration;
 
 #[tokio::main]
@@ -15,9 +15,7 @@ async fn main() -> anyhow::Result<()> {
                 Ok(resp)
             }
         },
-        LinearRetryStrategy::default()
-            .duration_between_repeats(Duration::from_secs(5))
-            .attempts(1),
+        LinearRetryStrategy::default().duration_between_repeats(Duration::from_secs(5)).attempts(1),
     )
     .await?;
 
