@@ -2,8 +2,8 @@ use crate::{RetryStrategy, TooManyAttempts};
 use std::time::Duration;
 
 pub struct LinearRetryStrategy {
-    max_attempts: usize,
-    duration_between_repeats: Duration,
+    pub max_attempts: usize,
+    pub duration_between_repeats: Duration,
 }
 
 impl Default for LinearRetryStrategy {

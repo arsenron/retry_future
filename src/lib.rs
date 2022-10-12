@@ -8,16 +8,26 @@ pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
 };
 
+/// Return type of [inner future](crate::future::FutureFactory::Future)
+/// inside [AsyncRetry](crate::future::AsyncRetry)
+///
+/// `Fail` variant means unrecoverable error
+///
+/// If `future` propagates errors early by using `?` then
+/// `Repeat` will contain [anyhow error](anyhow::Error) inside it.
+///
+/// If you want to provide some debug information about
+/// why a `future` failed, you can construct [anyhow error](anyhow::Error)
+/// yourself, such as `RetryPolicy::Repeat(Some(anyhow!("I failed here!")))`
 #[derive(Debug)]
 pub enum RetryPolicy<E> {
-    Repeat,
+    Repeat(Option<anyhow::Error>),
     Fail(E),
-    Any(anyhow::Error),
 }
 
 impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
     fn from(t: T) -> Self {
-        Self::Any(t.into())
+        Self::Repeat(Some(t.into()))
     }
 }
 

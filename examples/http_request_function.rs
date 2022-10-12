@@ -7,7 +7,7 @@ async fn make_request<T: IntoUrl>(url: T) -> Result<Response, RetryPolicy<String
     if resp.status() == StatusCode::BAD_REQUEST {
         Err(RetryPolicy::Fail(String::from("Cannot recover from bad request")))
     } else if resp.status() == StatusCode::INTERNAL_SERVER_ERROR {
-        Err(RetryPolicy::Repeat)
+        Err(RetryPolicy::Repeat(None))
     } else {
         Ok(resp)
     }
@@ -18,7 +18,9 @@ async fn main() -> anyhow::Result<()> {
     let url = "http://localhost:8084";
     let resp = AsyncRetry::new(
         || make_request(url),
-        LinearRetryStrategy::default().duration_between_repeats(Duration::from_secs(5)).max_attempts(2),
+        LinearRetryStrategy::default()
+            .duration_between_repeats(Duration::from_secs(5))
+            .max_attempts(2),
     )
     .await?;
 

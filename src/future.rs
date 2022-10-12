@@ -107,26 +107,21 @@ where
                         FutureState::NeedsPolling(Poll::Ready(Ok(t)))
                     }
                     Err(err) => {
-                        let mut move_to_next_state_depending_on_retry_strategy = |e| {
-                            let check_attempt_result = retry_strategy.check_attempt(attempts_before);
-                            match check_attempt_result {
-                                Ok(duration) => FutureState::TimerActive { delay: sleep(duration) },
-                                Err(_) => FutureState::NeedsPolling(Poll::Ready(Err(
-                                    RetryError::TooManyRepeats(e),
-                                ))),
-                            }
-                        };
                         let new_state = match err {
-                            RetryPolicy::Repeat => {
-                                move_to_next_state_depending_on_retry_strategy(None)
+                            RetryPolicy::Repeat(maybe_err) => {
+                                let check_attempt_result =
+                                    retry_strategy.check_attempt(attempts_before);
+                                match check_attempt_result {
+                                    Ok(duration) => {
+                                        FutureState::TimerActive { delay: sleep(duration) }
+                                    }
+                                    Err(_) => FutureState::NeedsPolling(Poll::Ready(Err(
+                                        RetryError::TooManyRepeats(maybe_err),
+                                    ))),
+                                }
                             }
                             RetryPolicy::Fail(s) => {
                                 FutureState::NeedsPolling(Poll::Ready(Err(RetryError::Fail(s))))
-                            }
-                            RetryPolicy::Any(any) => {
-                                move_to_next_state_depending_on_retry_strategy(Some(
-                                    any.context(format!("Failed after repeating {attempts_before} times",)),
-                                ))
                             }
                         };
                         *future_retry.attempts_before += 1;
