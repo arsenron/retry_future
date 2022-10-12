@@ -42,7 +42,7 @@ mod tests {
     #[tokio::test]
     async fn test_ok() {
         let f = AsyncRetry::new(
-            || ok::<_, u8>(255).map_err(|_| RetryPolicy::Repeat::<String>),
+            || ok::<_, u8>(255).map_err(|_| RetryPolicy::Fail("fail!")),
             LinearRetryStrategy::default(),
         );
         assert_eq!(255, f.await.unwrap());
@@ -54,6 +54,10 @@ mod tests {
             || err::<u8, _>(RetryPolicy::Fail("fail")),
             LinearRetryStrategy::default().max_attempts(1),
         );
-        assert_eq!(f.await.unwrap_err().to_string(), "Fail: fail");
+        if let RetryError::Fail(_) = f.await.unwrap_err() {
+            // ok
+        } else {
+            panic!("Fail error must be returned")
+        }
     }
 }
