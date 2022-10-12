@@ -2,7 +2,7 @@ mod error;
 mod future;
 mod retry_strategy;
 
-pub use error::{RetryError, TimeoutError};
+pub use error::{RetryError, TooManyAttempts};
 pub use future::{AsyncRetry, FutureFactory};
 pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
@@ -23,7 +23,7 @@ impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    pub use super::*;
     use futures::{
         future::{err, ok},
         TryFutureExt,
@@ -42,7 +42,7 @@ mod tests {
     async fn test_error() {
         let f = AsyncRetry::new(
             || err::<u8, _>(RetryPolicy::Fail("fail")),
-            LinearRetryStrategy::default().attempts(1),
+            LinearRetryStrategy::default().max_attempts(1),
         );
         assert_eq!(f.await.unwrap_err().to_string(), "Fail: fail");
     }

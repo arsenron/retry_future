@@ -1,4 +1,4 @@
-use crate::{RetryStrategy, TimeoutError};
+use crate::{RetryStrategy, TooManyAttempts};
 use std::time::Duration;
 
 pub struct InfiniteRetryStrategy {
@@ -6,7 +6,7 @@ pub struct InfiniteRetryStrategy {
 }
 
 impl RetryStrategy for InfiniteRetryStrategy {
-    fn check_attempt(&mut self, _current_attempt: usize) -> Result<Duration, TimeoutError> {
+    fn check_attempt(&mut self, _attempts_before: usize) -> Result<Duration, TooManyAttempts> {
         Ok(self.duration_between_repeats)
     }
 }

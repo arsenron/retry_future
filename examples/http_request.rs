@@ -1,4 +1,4 @@
-use async_retry::{AsyncRetry, LinearRetryStrategy, RetryPolicy};
+use async_retry::{AsyncRetry, ExponentialRetryStrategy, RetryPolicy};
 use reqwest::StatusCode;
 use std::time::Duration;
 
@@ -6,7 +6,7 @@ use std::time::Duration;
 async fn main() -> anyhow::Result<()> {
     let resp = AsyncRetry::new(
         || async {
-            let resp = reqwest::get("http://localhost:8084").await?;
+            let resp = reqwest::get("http://localhost:8085").await?;
             if resp.status() == StatusCode::BAD_REQUEST {
                 Err(RetryPolicy::Fail("Cannot recover from bad request"))
             } else if resp.status() == StatusCode::INTERNAL_SERVER_ERROR {
@@ -15,7 +15,7 @@ async fn main() -> anyhow::Result<()> {
                 Ok(resp)
             }
         },
-        LinearRetryStrategy::default().duration_between_repeats(Duration::from_secs(5)).attempts(1),
+        ExponentialRetryStrategy { max_attempts: 3, starts_with: Duration::from_millis(100) },
     )
     .await?;
 

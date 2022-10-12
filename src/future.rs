@@ -11,8 +11,6 @@ use crate::error::RetryError;
 use crate::retry_strategy::RetryStrategy;
 use crate::RetryPolicy;
 
-/// Spawns a new `Future` by `new` method in case of
-/// error returned from a `Future`
 pub trait FutureFactory<E> {
     type Future: TryFuture<Error = RetryPolicy<E>>;
 
@@ -28,7 +26,7 @@ where
     type Future = Fut;
 
     fn new(&mut self) -> Fut {
-        (self)()
+        self()
     }
 }
 
@@ -62,7 +60,7 @@ where
 {
     factory: F,
     retry_strategy: RS,
-    attempt: usize,
+    attempts_before: usize,
     #[pin]
     state: FutureState<F::Future, <Self as Future>::Output>,
     phantom: PhantomData<E>,
@@ -84,7 +82,7 @@ where
             factory,
             retry_strategy,
             state: FutureState::WaitingForFuture { future },
-            attempt: 0,
+            attempts_before: 0,
             phantom: Default::default(),
         }
     }
@@ -101,16 +99,16 @@ where
         loop {
             let future_retry = self.as_mut().project();
             let retry_strategy = future_retry.retry_strategy;
-            let attempt = *future_retry.attempt;
+            let attempts_before = *future_retry.attempts_before;
             let new_state = match future_retry.state.project() {
                 FutureStateProj::WaitingForFuture { future } => match ready!(future.try_poll(cx)) {
                     Ok(t) => {
-                        *future_retry.attempt = 0;
+                        *future_retry.attempts_before = 0;
                         FutureState::NeedsPolling(Poll::Ready(Ok(t)))
                     }
                     Err(err) => {
                         let mut move_to_next_state_depending_on_retry_strategy = |e| {
-                            let check_attempt_result = retry_strategy.check_attempt(attempt);
+                            let check_attempt_result = retry_strategy.check_attempt(attempts_before);
                             match check_attempt_result {
                                 Ok(duration) => FutureState::TimerActive { delay: sleep(duration) },
                                 Err(_) => FutureState::NeedsPolling(Poll::Ready(Err(
@@ -127,11 +125,11 @@ where
                             }
                             RetryPolicy::Any(any) => {
                                 move_to_next_state_depending_on_retry_strategy(Some(
-                                    any.context(format!("Failed after repeating {attempt} times",)),
+                                    any.context(format!("Failed after repeating {attempts_before} times",)),
                                 ))
                             }
                         };
-                        *future_retry.attempt += 1;
+                        *future_retry.attempts_before += 1;
                         new_state
                     }
                 },

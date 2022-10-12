@@ -1,21 +1,21 @@
-use crate::{RetryStrategy, TimeoutError};
+use crate::{RetryStrategy, TooManyAttempts};
 use std::time::Duration;
 
 pub struct LinearRetryStrategy {
-    pub attempts: usize,
-    pub duration_between_repeats: Duration,
+    max_attempts: usize,
+    duration_between_repeats: Duration,
 }
 
 impl Default for LinearRetryStrategy {
     fn default() -> Self {
-        Self { attempts: 5, duration_between_repeats: Duration::from_millis(500) }
+        Self { max_attempts: 5, duration_between_repeats: Duration::from_millis(500) }
     }
 }
 
 impl RetryStrategy for LinearRetryStrategy {
-    fn check_attempt(&mut self, current_attempt: usize) -> Result<Duration, TimeoutError> {
-        if self.attempts == current_attempt {
-            Err(TimeoutError)
+    fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts> {
+        if self.max_attempts == attempts_before {
+            Err(TooManyAttempts)
         } else {
             Ok(self.duration_between_repeats)
         }
@@ -23,8 +23,8 @@ impl RetryStrategy for LinearRetryStrategy {
 }
 
 impl LinearRetryStrategy {
-    pub fn attempts(mut self, repeat: usize) -> Self {
-        self.attempts = repeat;
+    pub fn max_attempts(mut self, max_attempts: usize) -> Self {
+        self.max_attempts = max_attempts;
         self
     }
 

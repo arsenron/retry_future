@@ -28,12 +28,12 @@ impl<E: Display> Debug for RetryError<E> {
 impl<E: Display> std::error::Error for RetryError<E> {}
 
 #[derive(Debug, Copy, Clone)]
-pub struct TimeoutError;
+pub struct TooManyAttempts;
 
-impl Display for TimeoutError {
+impl Display for TooManyAttempts {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         <Self as Debug>::fmt(self, f)
     }
 }
 
-impl std::error::Error for TimeoutError {}
+impl std::error::Error for TooManyAttempts {}

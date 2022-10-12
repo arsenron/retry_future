@@ -1,17 +1,18 @@
-use crate::{RetryStrategy, TimeoutError};
+use crate::{RetryStrategy, TooManyAttempts};
 use std::time::Duration;
 
 pub struct ExponentialRetryStrategy {
-    pub attempts: usize,
-    pub start_with: Duration,
+    pub max_attempts: usize,
+    pub starts_with: Duration,
 }
 
 impl RetryStrategy for ExponentialRetryStrategy {
-    fn check_attempt(&mut self, current_attempt: usize) -> Result<Duration, TimeoutError> {
-        if self.attempts == current_attempt {
-            Err(TimeoutError)
+    fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts> {
+        let exponent = 2_usize.pow(attempts_before as u32);
+        if self.max_attempts == attempts_before {
+            Err(TooManyAttempts)
         } else {
-            Ok(self.start_with * current_attempt as u32)
+            Ok(self.starts_with * exponent as u32)
         }
     }
 }
