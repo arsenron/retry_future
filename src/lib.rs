@@ -4,12 +4,12 @@ mod error;
 mod future;
 mod retry_strategy;
 
-use std::fmt::Debug;
 pub use error::{RetryError, TooManyAttempts};
 pub use future::{AsyncRetry, FutureFactory};
 pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
 };
+use std::fmt::Debug;
 
 /// Return type of [inner future](crate::future::FutureFactory::Future)
 /// inside [AsyncRetry](crate::future::AsyncRetry)
@@ -34,11 +34,32 @@ impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
     }
 }
 
+#[macro_export]
+macro_rules! fail {
+    ($e:expr) => {
+        return Err(RetryPolicy::Fail($e))
+    };
+}
+
+#[macro_export]
+macro_rules! repeat {
+    ($e:expr) => {
+        return Err(RetryPolicy::Repeat(Some(anyhow::anyhow!($e))))
+    };
+
+    () => {
+        return Err(RetryPolicy::Repeat(None))
+    };
+}
+
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
     pub use super::*;
-    use futures::{future::{err, ok}, TryFutureExt};
+    use futures::{
+        future::{err, ok},
+        TryFutureExt,
+    };
+    use std::time::Duration;
 
     struct PanicingRetryStrategy;
     impl RetryStrategy for PanicingRetryStrategy {
@@ -58,10 +79,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fail() {
-        let f = AsyncRetry::new(
-            || err::<u8, _>(RetryPolicy::Fail("fail")),
-            PanicingRetryStrategy,
-        );
+        let f = AsyncRetry::new(|| err::<u8, _>(RetryPolicy::Fail("fail")), PanicingRetryStrategy);
         if let RetryError::Fail(_) = f.await.unwrap_err() {
             // ok
         } else {
