@@ -4,17 +4,21 @@ use std::time::Duration;
 #[derive(Debug, Copy, Clone, Default)]
 pub struct ExponentialRetryStrategy {
     pub max_attempts: usize,
-    pub starts_with: Duration,
+    pub initial_delay: Duration,
 }
 
 impl ExponentialRetryStrategy {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn max_attempts(mut self, max_attempts: usize) -> Self {
         self.max_attempts = max_attempts;
         self
     }
 
-    pub fn starts_with(mut self, starts_with: Duration) -> Self {
-        self.starts_with = starts_with;
+    pub fn initial_delay(mut self, initial_delay: Duration) -> Self {
+        self.initial_delay = initial_delay;
         self
     }
 }
@@ -25,7 +29,7 @@ impl RetryStrategy for ExponentialRetryStrategy {
         if self.max_attempts == attempts_before {
             Err(TooManyAttempts)
         } else {
-            Ok(self.starts_with * exponent as u32)
+            Ok(self.initial_delay * exponent as u32)
         }
     }
 }

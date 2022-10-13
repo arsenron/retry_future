@@ -24,7 +24,9 @@ async fn main() -> anyhow::Result<()> {
                 e => Err(RetryPolicy::Fail(format!("Some unusual error here: {e:?}"))),
             }
         },
-        ExponentialRetryStrategy::default().max_attempts(3).starts_with(Duration::from_millis(100)),
+        ExponentialRetryStrategy::default()
+            .max_attempts(3)
+            .initial_delay(Duration::from_millis(100)),
     )
     .await?;
 

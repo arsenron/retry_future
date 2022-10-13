@@ -23,6 +23,10 @@ impl RetryStrategy for LinearRetryStrategy {
 }
 
 impl LinearRetryStrategy {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn max_attempts(mut self, max_attempts: usize) -> Self {
         self.max_attempts = max_attempts;
         self
