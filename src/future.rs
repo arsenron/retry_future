@@ -14,8 +14,7 @@ use crate::RetryPolicy;
 pub trait FutureFactory<E> {
     type Future: TryFuture<Error = RetryPolicy<E>>;
 
-    #[allow(clippy::wrong_self_convention)]
-    fn new(&mut self) -> Self::Future;
+    fn spawn(&mut self) -> Self::Future;
 }
 
 impl<T, Fut, E> FutureFactory<E> for T
@@ -25,13 +24,13 @@ where
 {
     type Future = Fut;
 
-    fn new(&mut self) -> Fut {
+    fn spawn(&mut self) -> Fut {
         self()
     }
 }
 
 #[pin_project(project = FutureStateProj)]
-enum FutureState<Fut, Output> {
+enum FutureState<Fut> {
     WaitingForFuture {
         #[pin]
         future: Fut,
@@ -40,9 +39,6 @@ enum FutureState<Fut, Output> {
         #[pin]
         delay: tokio::time::Sleep,
     },
-    /// When this enum variant is matched, we immediately return
-    /// from `poll`
-    NeedsPolling(Poll<Output>),
 }
 
 /// A future which is trying to resolve inner future
@@ -62,7 +58,7 @@ where
     retry_strategy: RS,
     attempts_before: usize,
     #[pin]
-    state: FutureState<F::Future, <Self as Future>::Output>,
+    state: FutureState<F::Future>,
     phantom: PhantomData<E>,
 }
 
@@ -77,7 +73,7 @@ where
     ///
     /// See examples to understand how to use this.
     pub fn new(mut factory: F, retry_strategy: RS) -> Self {
-        let future = factory.new();
+        let future = factory.spawn();
         Self {
             factory,
             retry_strategy,
@@ -104,7 +100,7 @@ where
                 FutureStateProj::WaitingForFuture { future } => match ready!(future.try_poll(cx)) {
                     Ok(t) => {
                         *future_retry.attempts_before = 0;
-                        FutureState::NeedsPolling(Poll::Ready(Ok(t)))
+                        return Poll::Ready(Ok(t));
                     }
                     Err(err) => {
                         let new_state = match err {
@@ -115,13 +111,15 @@ where
                                     Ok(duration) => {
                                         FutureState::TimerActive { delay: sleep(duration) }
                                     }
-                                    Err(_) => FutureState::NeedsPolling(Poll::Ready(Err(
-                                        RetryError::TooManyRepeats(maybe_err),
-                                    ))),
+                                    Err(_) => {
+                                        return Poll::Ready(Err(RetryError::TooManyRepeats(
+                                            maybe_err,
+                                        )))
+                                    }
                                 }
                             }
                             RetryPolicy::Fail(s) => {
-                                FutureState::NeedsPolling(Poll::Ready(Err(RetryError::Fail(s))))
+                                return Poll::Ready(Err(RetryError::Fail(s)));
                             }
                         };
                         *future_retry.attempts_before += 1;
@@ -130,12 +128,7 @@ where
                 },
                 FutureStateProj::TimerActive { delay } => {
                     ready!(delay.poll(cx));
-                    FutureState::WaitingForFuture { future: future_retry.factory.new() }
-                }
-                FutureStateProj::NeedsPolling(poll) => {
-                    // move from &mut T to original T. It is ok as we immediately return
-                    let output = std::mem::replace(poll, Poll::Pending);
-                    return output;
+                    FutureState::WaitingForFuture { future: future_retry.factory.spawn() }
                 }
             };
 
