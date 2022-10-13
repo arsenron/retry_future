@@ -1,5 +1,4 @@
 use std::future::Future;
-use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -59,7 +58,6 @@ where
     attempts_before: usize,
     #[pin]
     state: FutureState<F::Future>,
-    phantom: PhantomData<E>,
 }
 
 impl<F, E, RS> AsyncRetry<F, E, RS>
@@ -79,7 +77,6 @@ where
             retry_strategy,
             state: FutureState::WaitingForFuture { future },
             attempts_before: 0,
-            phantom: Default::default(),
         }
     }
 }
