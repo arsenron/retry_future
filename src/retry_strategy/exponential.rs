@@ -33,3 +33,21 @@ impl RetryStrategy for ExponentialRetryStrategy {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_exponent() {
+        let mut strategy =
+            ExponentialRetryStrategy { max_attempts: 5, initial_delay: Duration::from_secs(1) };
+        assert_eq!(strategy.check_attempt(0).unwrap(), Duration::from_secs(1));
+        assert_eq!(strategy.check_attempt(1).unwrap(), Duration::from_secs(2));
+        assert_eq!(strategy.check_attempt(2).unwrap(), Duration::from_secs(4));
+        assert_eq!(strategy.check_attempt(3).unwrap(), Duration::from_secs(8));
+        assert_eq!(strategy.check_attempt(4).unwrap(), Duration::from_secs(16));
+
+        assert!(strategy.check_attempt(5).is_err());
+    }
+}
