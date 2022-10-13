@@ -2,6 +2,7 @@ mod error;
 mod future;
 mod retry_strategy;
 
+use std::fmt::Debug;
 pub use error::{RetryError, TooManyAttempts};
 pub use future::{AsyncRetry, FutureFactory};
 pub use retry_strategy::{
@@ -23,6 +24,20 @@ pub use retry_strategy::{
 pub enum RetryPolicy<E> {
     Repeat(Option<anyhow::Error>),
     Fail(E),
+}
+
+impl<E> RetryPolicy<E> {
+    pub fn repeat<T>(msg: anyhow::Error) -> Result<T, RetryPolicy<E>> {
+        Err(RetryPolicy::Repeat(Some(msg)))
+    }
+
+    pub fn repeat_without_context<T>() -> Result<T, RetryPolicy<E>> {
+        Err(RetryPolicy::Repeat(None))
+    }
+
+    pub fn fail<T>(msg: E) -> Result<T, RetryPolicy<E>> {
+        Err(RetryPolicy::Fail(msg))
+    }
 }
 
 impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
