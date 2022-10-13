@@ -11,16 +11,17 @@ async fn main() -> anyhow::Result<()> {
             let resp = reqwest::get("http://localhost:8085").await?;
             match resp.status() {
                 StatusCode::OK => Ok(resp),
-                StatusCode::BAD_REQUEST | StatusCode::FORBIDDEN => RetryPolicy::fail(format!(
-                    "Cannot recover from these kind of errors ._. - {resp:?}"
+                StatusCode::BAD_REQUEST | StatusCode::FORBIDDEN => Err(RetryPolicy::Fail(
+                    String::from("Cannot recover from these kind of errors ._."),
                 )),
+                StatusCode::INTERNAL_SERVER_ERROR => Err(RetryPolicy::Repeat(None)),
+                // What if authorization server lies us?! Repeat it to be convinced
                 StatusCode::UNAUTHORIZED => {
-                    // What if authorization server lies us?! Repeat it to be convinced
-                    let response_text = resp.text().await?;
-                    RetryPolicy::repeat(anyhow::anyhow!(response_text))
+                    // Get error message as debug info
+                    let maybe_response_text = resp.text().await.ok().map(anyhow::Error::msg);
+                    Err(RetryPolicy::Repeat(maybe_response_text))
                 }
-                StatusCode::INTERNAL_SERVER_ERROR => RetryPolicy::repeat_without_context(),
-                e => RetryPolicy::fail(format!("Some unusual status code here: {e:?}")),
+                e => Err(RetryPolicy::Fail(format!("Some unusual error here: {e:?}"))),
             }
         },
         ExponentialRetryStrategy::default()

@@ -26,20 +26,6 @@ pub enum RetryPolicy<E> {
     Fail(E),
 }
 
-impl<E> RetryPolicy<E> {
-    pub fn repeat<T>(msg: anyhow::Error) -> Result<T, RetryPolicy<E>> {
-        Err(RetryPolicy::Repeat(Some(msg)))
-    }
-
-    pub fn repeat_without_context<T>() -> Result<T, RetryPolicy<E>> {
-        Err(RetryPolicy::Repeat(None))
-    }
-
-    pub fn fail<T>(msg: E) -> Result<T, RetryPolicy<E>> {
-        Err(RetryPolicy::Fail(msg))
-    }
-}
-
 impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
     fn from(t: T) -> Self {
         Self::Repeat(Some(t.into()))
