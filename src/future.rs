@@ -103,7 +103,7 @@ where
                         async_retry.errors.push(err);
                         let err = async_retry.errors.last().unwrap(); // cannot panic as we just pushed to vec
                         let new_state = match err {
-                            RetryPolicy::Repeat(ref maybe_err) => {
+                            RetryPolicy::Repeat(_) => {
                                 let check_attempt_result = async_retry
                                     .retry_strategy
                                     .check_attempt(*async_retry.attempts_before);

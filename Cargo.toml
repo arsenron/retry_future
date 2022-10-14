@@ -2,6 +2,10 @@
 name = "async_retry"
 version = "0.1.0"
 edition = "2021"
+license = "MIT/Apache-2.0"
+keywords = ["tokio", "futures", "async", "factory", "retry"]
+authors = ["arsenron <arsenron@gmail.com>"]
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

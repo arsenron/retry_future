@@ -1,19 +1,17 @@
-use async_retry::{AsyncRetry, ExponentialRetryStrategy, RetryPolicy};
-use futures::TryFutureExt;
-use reqwest::StatusCode;
+use async_retry::{AsyncRetry, LinearRetryStrategy, RetryPolicy};
 use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let resp = AsyncRetry::new(
-        || reqwest::get("http://localhost:8085").map_err(|e| RetryPolicy::Repeat(Some(e))),
-        ExponentialRetryStrategy::default()
-            .max_attempts(50)
-            .initial_delay(Duration::from_millis(100)),
+    let text = AsyncRetry::new(
+        || async { Ok::<_, RetryPolicy>(reqwest::get("http://localhost:8084").await?.text().await?) },
+        LinearRetryStrategy::default()
+            .max_attempts(10)
+            .delay_between_repeats(Duration::from_millis(100)),
     )
     .await?;
 
-    eprintln!("resp = {:#?}", resp);
+    eprintln!("text = {:#?}", text);
 
     Ok(())
 }

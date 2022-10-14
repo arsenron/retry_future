@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
                     let response_text = resp.text().await?;
                     repeat!(response_text)
                 }
-                e => fail!(format!("Some unusual error here: {e:?}")),
+                e => fail!(format!("Some unusual statusc code here: {e:?}")),
             }
         },
         ExponentialRetryStrategy::default()

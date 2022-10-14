@@ -23,7 +23,7 @@ use std::fmt::Debug;
 /// why a `future` failed, you can construct [anyhow error](anyhow::Error)
 /// yourself, such as `RetryPolicy::Repeat(Some(anyhow!("I failed here!")))`
 #[derive(Debug)]
-pub enum RetryPolicy<E> {
+pub enum RetryPolicy<E = String> {
     Repeat(Option<anyhow::Error>),
     Fail(E),
 }
@@ -80,7 +80,7 @@ mod tests {
     #[tokio::test]
     async fn test_fail() {
         let f = AsyncRetry::new(|| err::<u8, _>(RetryPolicy::Fail("fail")), PanicingRetryStrategy);
-        if let RetryError::Fail(_) = f.await.unwrap_err() {
+        if let RetryPolicy::Fail(_) = f.await.unwrap_err().errors.last().unwrap() {
             // ok
         } else {
             panic!("Fail error must be returned")
