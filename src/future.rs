@@ -50,8 +50,7 @@ enum FutureState<Fut> {
 #[pin_project]
 pub struct AsyncRetry<F, E, RS>
 where
-    F: FutureFactory<E>,
-    RS: RetryStrategy,
+    F: FutureFactory<E>
 {
     factory: F,
     retry_strategy: RS,
@@ -64,7 +63,6 @@ where
 impl<F, E, RS> AsyncRetry<F, E, RS>
 where
     F: FutureFactory<E>,
-    RS: RetryStrategy,
 {
     /// [FutureFactory](FutureFactory) has a blanket implementation
     /// for FnMut closures. This means that you can pass a closure instead
@@ -113,13 +111,13 @@ where
                                     }
                                     Err(_) => {
                                         let errors =
-                                            std::mem::replace(async_retry.errors, Vec::new());
+                                            std::mem::take(async_retry.errors);
                                         return Poll::Ready(Err(RetryError { errors }));
                                     }
                                 }
                             }
                             RetryPolicy::Fail(_) => {
-                                let errors = std::mem::replace(async_retry.errors, Vec::new());
+                                let errors = std::mem::take(async_retry.errors);
                                 return Poll::Ready(Err(RetryError { errors }));
                             }
                         };
