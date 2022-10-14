@@ -6,6 +6,8 @@ license = "MIT/Apache-2.0"
 keywords = ["tokio", "futures", "async", "factory", "retry"]
 authors = ["arsenron <arsenron@gmail.com>"]
 readme = "README.md"
+repository = "https://github.com/arsenron/async_retry"
+description = "Retry futures mechanism"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
