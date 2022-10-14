@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         ExponentialRetryStrategy::default()
-            .max_attempts(5)
+            .max_attempts(2)
             .initial_delay(Duration::from_millis(100)),
     )
     .await?;

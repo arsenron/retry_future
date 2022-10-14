@@ -1,21 +1,23 @@
+use crate::RetryPolicy;
 use std::fmt::{Debug, Display, Formatter};
 
-pub enum RetryError<E> {
-    TooManyRepeats(Option<anyhow::Error>),
-    Fail(E),
+pub struct RetryError<E> {
+    pub errors: Vec<RetryPolicy<E>>,
 }
 
 impl<E: Display> Display for RetryError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RetryError::TooManyRepeats(maybe_error) => match maybe_error {
-                Some(e) => write!(f, "TooManyRepeats: {e:?}"),
-                None => write!(f, "TooManyRepeats"),
-            },
-            RetryError::Fail(fail) => {
-                write!(f, "Fail: {fail}")
+        for (i, e) in self.errors.iter().enumerate() {
+            match e {
+                RetryPolicy::Repeat(maybe_error) => {
+                    writeln!(f, "{}", "-".repeat(100))?;
+                    writeln!(f, "Attempt {i} ")?;
+                    writeln!(f, "TooManyRepeats: {maybe_error:?}")?;
+                }
+                RetryPolicy::Fail(fail) => writeln!(f, "Fail: {fail}")?,
             }
         }
+        Ok(())
     }
 }
 

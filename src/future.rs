@@ -58,6 +58,7 @@ where
     attempts_before: usize,
     #[pin]
     state: FutureState<F::Future>,
+    errors: Vec<RetryPolicy<E>>,
 }
 
 impl<F, E, RS> AsyncRetry<F, E, RS>
@@ -77,6 +78,7 @@ where
             retry_strategy,
             state: FutureState::WaitingForFuture { future },
             attempts_before: 0,
+            errors: Vec::new(),
         }
     }
 }
@@ -90,42 +92,44 @@ where
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         loop {
-            let future_retry = self.as_mut().project();
-            let retry_strategy = future_retry.retry_strategy;
-            let attempts_before = *future_retry.attempts_before;
-            let new_state = match future_retry.state.project() {
+            let async_retry = self.as_mut().project();
+            let new_state = match async_retry.state.project() {
                 FutureStateProj::WaitingForFuture { future } => match ready!(future.try_poll(cx)) {
                     Ok(t) => {
-                        *future_retry.attempts_before = 0;
+                        *async_retry.attempts_before = 0;
                         return Poll::Ready(Ok(t));
                     }
                     Err(err) => {
+                        async_retry.errors.push(err);
+                        let err = async_retry.errors.last().unwrap(); // cannot panic as we just pushed to vec
                         let new_state = match err {
-                            RetryPolicy::Repeat(maybe_err) => {
-                                let check_attempt_result =
-                                    retry_strategy.check_attempt(attempts_before);
+                            RetryPolicy::Repeat(ref maybe_err) => {
+                                let check_attempt_result = async_retry
+                                    .retry_strategy
+                                    .check_attempt(*async_retry.attempts_before);
                                 match check_attempt_result {
                                     Ok(duration) => {
                                         FutureState::TimerActive { delay: sleep(duration) }
                                     }
                                     Err(_) => {
-                                        return Poll::Ready(Err(RetryError::TooManyRepeats(
-                                            maybe_err,
-                                        )))
+                                        let errors =
+                                            std::mem::replace(async_retry.errors, Vec::new());
+                                        return Poll::Ready(Err(RetryError { errors }));
                                     }
                                 }
                             }
-                            RetryPolicy::Fail(s) => {
-                                return Poll::Ready(Err(RetryError::Fail(s)));
+                            RetryPolicy::Fail(_) => {
+                                let errors = std::mem::replace(async_retry.errors, Vec::new());
+                                return Poll::Ready(Err(RetryError { errors }));
                             }
                         };
-                        *future_retry.attempts_before += 1;
+                        *async_retry.attempts_before += 1;
                         new_state
                     }
                 },
                 FutureStateProj::TimerActive { delay } => {
                     ready!(delay.poll(cx));
-                    FutureState::WaitingForFuture { future: future_retry.factory.spawn() }
+                    FutureState::WaitingForFuture { future: async_retry.factory.spawn() }
                 }
             };
 
