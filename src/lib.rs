@@ -1,5 +1,3 @@
-extern crate core;
-
 mod error;
 mod future;
 mod retry_strategy;

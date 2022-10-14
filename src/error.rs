@@ -13,8 +13,8 @@ pub struct RetryError<E> {
 
 impl<E: Display> Display for RetryError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for (i, e) in self.errors.iter().enumerate() {
-            match e {
+        for (i, retry_policy) in self.errors.iter().enumerate() {
+            match retry_policy {
                 RetryPolicy::Repeat(maybe_error) => {
                     writeln!(f, "{}", "-".repeat(100))?;
                     writeln!(f, "Attempt {i} ")?;
