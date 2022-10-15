@@ -1,6 +1,7 @@
 use crate::{RetryStrategy, TooManyAttempts};
 use std::time::Duration;
 
+/// Simple retry strategy that is retrying futures after [Duration](std::time::Duration)
 pub struct LinearRetryStrategy {
     pub max_attempts: usize,
     pub delay_between_repeats: Duration,

@@ -10,6 +10,11 @@ use crate::error::RetryError;
 use crate::retry_strategy::RetryStrategy;
 use crate::RetryPolicy;
 
+/// Used in [RetryFuture](crate::RetryFuture) to spawn
+/// a new future in case it fails.
+///
+/// If a future fails, then it's internal state is undefined
+/// thats why we need to create a completely new future.
 pub trait FutureFactory<E> {
     type Future: TryFuture<Error = RetryPolicy<E>>;
 
@@ -48,7 +53,7 @@ enum FutureState<Fut> {
 /// [RetryStrategy](crate::retry_strategy::RetryStrategy) trait
 /// which is responsible for configuring retry mechanism
 #[pin_project]
-pub struct AsyncRetry<F, E, RS>
+pub struct RetryFuture<F, E, RS>
 where
     F: FutureFactory<E>
 {
@@ -60,7 +65,7 @@ where
     errors: Vec<RetryPolicy<E>>,
 }
 
-impl<F, E, RS> AsyncRetry<F, E, RS>
+impl<F, E, RS> RetryFuture<F, E, RS>
 where
     F: FutureFactory<E>,
 {
@@ -81,7 +86,7 @@ where
     }
 }
 
-impl<F, E, RS> Future for AsyncRetry<F, E, RS>
+impl<F, E, RS> Future for RetryFuture<F, E, RS>
 where
     F: FutureFactory<E>,
     RS: RetryStrategy,
@@ -90,44 +95,44 @@ where
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         loop {
-            let async_retry = self.as_mut().project();
-            let new_state = match async_retry.state.project() {
+            let retry_future = self.as_mut().project();
+            let new_state = match retry_future.state.project() {
                 FutureStateProj::WaitingForFuture { future } => match ready!(future.try_poll(cx)) {
                     Ok(t) => {
-                        *async_retry.attempts_before = 0;
+                        *retry_future.attempts_before = 0;
                         return Poll::Ready(Ok(t));
                     }
                     Err(err) => {
-                        async_retry.errors.push(err);
-                        let err = async_retry.errors.last().unwrap(); // cannot panic as we just pushed to vec
+                        retry_future.errors.push(err);
+                        let err = retry_future.errors.last().unwrap(); // cannot panic as we just pushed to vec
                         let new_state = match err {
                             RetryPolicy::Repeat(_) => {
-                                let check_attempt_result = async_retry
+                                let check_attempt_result = retry_future
                                     .retry_strategy
-                                    .check_attempt(*async_retry.attempts_before);
+                                    .check_attempt(*retry_future.attempts_before);
                                 match check_attempt_result {
                                     Ok(duration) => {
                                         FutureState::TimerActive { delay: sleep(duration) }
                                     }
                                     Err(_) => {
                                         let errors =
-                                            std::mem::take(async_retry.errors);
+                                            std::mem::take(retry_future.errors);
                                         return Poll::Ready(Err(RetryError { errors }));
                                     }
                                 }
                             }
                             RetryPolicy::Fail(_) => {
-                                let errors = std::mem::take(async_retry.errors);
+                                let errors = std::mem::take(retry_future.errors);
                                 return Poll::Ready(Err(RetryError { errors }));
                             }
                         };
-                        *async_retry.attempts_before += 1;
+                        *retry_future.attempts_before += 1;
                         new_state
                     }
                 },
                 FutureStateProj::TimerActive { delay } => {
                     ready!(delay.poll(cx));
-                    FutureState::WaitingForFuture { future: async_retry.factory.spawn() }
+                    FutureState::WaitingForFuture { future: retry_future.factory.spawn() }
                 }
             };
 

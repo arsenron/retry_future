@@ -9,7 +9,7 @@ pub use exponential::ExponentialRetryStrategy;
 pub use infinite::InfiniteRetryStrategy;
 pub use linear::LinearRetryStrategy;
 
-/// Configuration trait for [AsyncRetry](crate::AsyncRetry).
+/// Configuration trait for [RetryFuture](crate::RetryFuture).
 ///
 /// Goal of the trait is to return either a [duration](std::time::Duration)
 /// which means how long a future needs to sleep before trying to resolve again

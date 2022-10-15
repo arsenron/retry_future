@@ -1,6 +1,7 @@
 use crate::{RetryStrategy, TooManyAttempts};
 use std::time::Duration;
 
+/// Infinite retry
 pub struct InfiniteRetryStrategy {
     pub duration_between_repeats: Duration,
 }

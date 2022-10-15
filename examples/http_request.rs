@@ -1,4 +1,4 @@
-use async_retry::{AsyncRetry, ExponentialRetryStrategy, RetryPolicy};
+use retry_future::{RetryFuture, ExponentialRetryStrategy, RetryPolicy};
 use reqwest::StatusCode;
 use std::time::Duration;
 
@@ -6,7 +6,7 @@ use std::time::Duration;
 async fn main() -> anyhow::Result<()> {
     // You can return any error which you want inside RetryPolicy::Fail(E).
     // In example below we opt for String
-    let resp = AsyncRetry::new(
+    let resp = RetryFuture::new(
         || async {
             let resp = reqwest::get("http://localhost:8085").await?;
             match resp.status() {

@@ -3,14 +3,14 @@ mod future;
 mod retry_strategy;
 
 pub use error::{RetryError, TooManyAttempts};
-pub use future::{AsyncRetry, FutureFactory};
+pub use future::{RetryFuture, FutureFactory};
 pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
 };
 use std::fmt::Debug;
 
 /// Return type of [inner future](crate::future::FutureFactory::Future)
-/// inside [AsyncRetry](crate::future::AsyncRetry)
+/// inside [RetryFuture](crate::future::RetryFuture)
 ///
 /// `Fail` variant means unrecoverable error
 ///
@@ -23,6 +23,8 @@ use std::fmt::Debug;
 #[derive(Debug)]
 pub enum RetryPolicy<E = String> {
     Repeat(Option<anyhow::Error>),
+    /// Unrecoverable error which means that the [RetryFuture](crate::future::RetryFuture)
+    /// `Future` will immediately return with an error
     Fail(E),
 }
 
@@ -32,6 +34,7 @@ impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
     }
 }
 
+/// Return early with [RetryPolicy::Fail](crate::RetryPolicy::Fail)
 #[macro_export]
 macro_rules! fail {
     ($e:expr) => {
@@ -39,6 +42,10 @@ macro_rules! fail {
     };
 }
 
+/// Return early with [RetryPolicy::Repeat](crate::RetryPolicy::Repeat)
+///
+/// Inside `repeat` if `arg` is provided, it will be wrapped by `anyhow::anyhow!` macro
+/// so you may omit creating an [anyhow error][anyhow::Error] yourself.
 #[macro_export]
 macro_rules! repeat {
     ($e:expr) => {
@@ -68,7 +75,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ok() {
-        let f = AsyncRetry::new(
+        let f = RetryFuture::new(
             || ok::<_, u8>(255).map_err(|_| RetryPolicy::Fail("fail!")),
             PanicingRetryStrategy,
         );
@@ -77,7 +84,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fail() {
-        let f = AsyncRetry::new(|| err::<u8, _>(RetryPolicy::Fail("fail")), PanicingRetryStrategy);
+        let f = RetryFuture::new(|| err::<u8, _>(RetryPolicy::Fail("fail")), PanicingRetryStrategy);
         if let RetryPolicy::Fail(_) = f.await.unwrap_err().errors.last().unwrap() {
             // ok
         } else {

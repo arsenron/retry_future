@@ -1,8 +1,8 @@
 use crate::RetryPolicy;
 use std::fmt::{Debug, Display, Formatter};
 
-/// Error returned from [AsyncRetry](crate::AsyncRetry::poll), i.e.
-/// when we await [AsyncRetry](crate::AsyncRetry), the returned type is `Result<T, RetryError<E>>`
+/// Error returned from [RetryFuture](crate::RetryFuture::poll), i.e.
+/// when we await [RetryFuture](crate::RetryFuture), the returned type is `Result<T, RetryError<E>>`
 ///
 /// This type accumulates all errors that happen inside inner future.
 /// That means that after a future failed to resolve to Ok(_),

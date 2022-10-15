@@ -1,9 +1,9 @@
-use async_retry::{AsyncRetry, LinearRetryStrategy, RetryPolicy};
+use retry_future::{RetryFuture, LinearRetryStrategy, RetryPolicy};
 use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let text = AsyncRetry::new(
+    let text = RetryFuture::new(
         || async { Ok::<_, RetryPolicy>(reqwest::get("http://localhost:8084").await?.text().await?) },
         LinearRetryStrategy::default()
             .max_attempts(10)

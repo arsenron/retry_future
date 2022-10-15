@@ -8,13 +8,13 @@ grpc requests.
 For examples, please check `examples/` dir, but here is one:
 ```rust
 // imports...
-use async_retry::{
-    AsyncRetry, RetryPolicy, ExponentialRetryStrategy
+use retry_future::{
+    RetryFuture, RetryPolicy, ExponentialRetryStrategy
 };
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let resp = AsyncRetry::new(
+    let resp = RetryFuture::new(
         || async {
             let resp = reqwest::get("http://localhost:8080").await?;
             match resp.status() {
