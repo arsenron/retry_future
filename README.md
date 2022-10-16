@@ -1,4 +1,4 @@
-# Async Retry
+# Retry Future
 
 The main purpose of the crate is to repeat `Futures` which may contain complex scenarios such as
 not only handling errors but anything that should be repeated. This may include 
