@@ -1,6 +1,27 @@
 use crate::RetryPolicy;
 use std::fmt::{Debug, Display, Formatter};
 
+pub struct Error {
+    pub error: anyhow::Error,
+    pub(crate) is_early_returned: bool,
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self.error, f)
+    }
+}
+
+impl Error {
+    pub fn msg<M: Display + Debug + Send + Sync + 'static>(msg: M) -> Self {
+        Self { error: anyhow::Error::msg(msg), is_early_returned: false }
+    }
+
+    pub fn new<E: std::error::Error + Send + Sync + 'static>(e: E) -> Self {
+        Self { error: anyhow::Error::new(e), is_early_returned: false }
+    }
+}
+
 /// Error returned from [RetryFuture](crate::RetryFuture::poll), i.e.
 /// when we await [RetryFuture](crate::RetryFuture), the returned type is `Result<T, RetryError<E>>`
 ///

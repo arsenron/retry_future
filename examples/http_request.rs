@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
                 // What if authorization server lies us?! Repeat it to be convinced
                 StatusCode::UNAUTHORIZED => {
                     // Get error message as debug info
-                    let maybe_response_text = resp.text().await.ok().map(anyhow::Error::msg);
+                    let maybe_response_text = resp.text().await.ok().map(retry_future::Error::msg);
                     Err(RetryPolicy::Retry(maybe_response_text))
                 }
                 e => Err(RetryPolicy::Fail(format!("Some unusual error here: {e:?}"))),

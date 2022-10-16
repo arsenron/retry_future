@@ -106,7 +106,20 @@ where
                         retry_future.errors.push(err);
                         let err = retry_future.errors.last().unwrap(); // cannot panic as we just pushed to vec
                         let new_state = match err {
-                            RetryPolicy::Retry(_) => {
+                            RetryPolicy::Retry(maybe_err) => {
+                                if maybe_err
+                                    .as_ref()
+                                    .filter(|e| {
+                                        e.is_early_returned
+                                            && !retry_future
+                                                .retry_strategy
+                                                .retry_early_returned_errors()
+                                    })
+                                    .is_some()
+                                {
+                                    let errors = std::mem::take(retry_future.errors);
+                                    return Poll::Ready(Err(RetryError { errors }));
+                                }
                                 let check_attempt_result = retry_future
                                     .retry_strategy
                                     .check_attempt(*retry_future.attempts_before);

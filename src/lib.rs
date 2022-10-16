@@ -2,7 +2,7 @@ mod error;
 mod future;
 mod retry_strategy;
 
-pub use error::{RetryError, TooManyAttempts};
+pub use error::{Error, RetryError, TooManyAttempts};
 pub use future::{FutureFactory, RetryFuture};
 pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
@@ -22,7 +22,7 @@ use std::fmt::Debug;
 /// yourself, such as `RetryPolicy::Retry(Some(anyhow!("I failed here!")))`
 #[derive(Debug)]
 pub enum RetryPolicy<E = String> {
-    Retry(Option<anyhow::Error>),
+    Retry(Option<Error>),
     /// Unrecoverable error which means that the [RetryFuture](crate::future::RetryFuture)
     /// `Future` will immediately return with an error
     Fail(E),
@@ -30,7 +30,7 @@ pub enum RetryPolicy<E = String> {
 
 impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
     fn from(t: T) -> Self {
-        Self::Retry(Some(t.into()))
+        Self::Retry(Some(Error { error: t.into(), is_early_returned: true }))
     }
 }
 
@@ -67,6 +67,7 @@ mod tests {
     use std::time::Duration;
 
     struct PanicingRetryStrategy;
+
     impl RetryStrategy for PanicingRetryStrategy {
         fn check_attempt(&mut self, _attempts_before: usize) -> Result<Duration, TooManyAttempts> {
             panic!()

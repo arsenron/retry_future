@@ -18,6 +18,10 @@ pub trait RetryStrategy {
     /// `attempts_before` means how many attempts a [future](crate::future::FutureFactory::Future)
     /// was trying to resolve to `Ok(_)` after returning `Err(_)`.
     fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts>;
+
+    fn retry_early_returned_errors(&self) -> bool {
+        true
+    }
 }
 
 impl<T> RetryStrategy for &mut T
