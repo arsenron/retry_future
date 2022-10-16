@@ -11,10 +11,10 @@ use crate::retry_strategy::RetryStrategy;
 use crate::RetryPolicy;
 
 /// Used in [RetryFuture](crate::RetryFuture) to spawn
-/// a new future in case it fails.
+/// a new future in case it did not resolve to `Ok(_)`
 ///
 /// If a future fails, then it's internal state is undefined
-/// thats why we need to create a completely new future.
+/// thats why we need to create a new future.
 pub trait FutureFactory<E> {
     type Future: TryFuture<Error = RetryPolicy<E>>;
 
@@ -55,7 +55,7 @@ enum FutureState<Fut> {
 #[pin_project]
 pub struct RetryFuture<F, E, RS>
 where
-    F: FutureFactory<E>
+    F: FutureFactory<E>,
 {
     factory: F,
     retry_strategy: RS,
@@ -106,7 +106,7 @@ where
                         retry_future.errors.push(err);
                         let err = retry_future.errors.last().unwrap(); // cannot panic as we just pushed to vec
                         let new_state = match err {
-                            RetryPolicy::Repeat(_) => {
+                            RetryPolicy::Retry(_) => {
                                 let check_attempt_result = retry_future
                                     .retry_strategy
                                     .check_attempt(*retry_future.attempts_before);
@@ -115,8 +115,7 @@ where
                                         FutureState::TimerActive { delay: sleep(duration) }
                                     }
                                     Err(_) => {
-                                        let errors =
-                                            std::mem::take(retry_future.errors);
+                                        let errors = std::mem::take(retry_future.errors);
                                         return Poll::Ready(Err(RetryError { errors }));
                                     }
                                 }

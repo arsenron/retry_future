@@ -3,7 +3,7 @@ mod future;
 mod retry_strategy;
 
 pub use error::{RetryError, TooManyAttempts};
-pub use future::{RetryFuture, FutureFactory};
+pub use future::{FutureFactory, RetryFuture};
 pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
 };
@@ -15,14 +15,14 @@ use std::fmt::Debug;
 /// `Fail` variant means unrecoverable error
 ///
 /// If `future` propagates errors early by using `?` then
-/// `Repeat` will contain [anyhow error](anyhow::Error) inside it.
+/// `Retry` will contain [anyhow error](anyhow::Error) inside it.
 ///
 /// If you want to provide some debug information about
 /// why a `future` failed, you can construct [anyhow error](anyhow::Error)
-/// yourself, such as `RetryPolicy::Repeat(Some(anyhow!("I failed here!")))`
+/// yourself, such as `RetryPolicy::Retry(Some(anyhow!("I failed here!")))`
 #[derive(Debug)]
 pub enum RetryPolicy<E = String> {
-    Repeat(Option<anyhow::Error>),
+    Retry(Option<anyhow::Error>),
     /// Unrecoverable error which means that the [RetryFuture](crate::future::RetryFuture)
     /// `Future` will immediately return with an error
     Fail(E),
@@ -30,7 +30,7 @@ pub enum RetryPolicy<E = String> {
 
 impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
     fn from(t: T) -> Self {
-        Self::Repeat(Some(t.into()))
+        Self::Retry(Some(t.into()))
     }
 }
 
@@ -42,18 +42,18 @@ macro_rules! fail {
     };
 }
 
-/// Return early with [RetryPolicy::Repeat](crate::RetryPolicy::Repeat)
+/// Return early with [RetryPolicy::Retry](crate::RetryPolicy::Retry)
 ///
 /// Inside `repeat` if `arg` is provided, it will be wrapped by `anyhow::anyhow!` macro
 /// so you may omit creating an [anyhow error][anyhow::Error] yourself.
 #[macro_export]
-macro_rules! repeat {
+macro_rules! retry {
     ($e:expr) => {
-        return Err(RetryPolicy::Repeat(Some(anyhow::anyhow!($e))))
+        return Err(RetryPolicy::Retry(Some(anyhow::anyhow!($e))))
     };
 
     () => {
-        return Err(RetryPolicy::Repeat(None))
+        return Err(RetryPolicy::Retry(None))
     };
 }
 

@@ -15,10 +15,10 @@ impl<E: Display> Display for RetryError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for (i, retry_policy) in self.errors.iter().enumerate() {
             match retry_policy {
-                RetryPolicy::Repeat(maybe_error) => {
+                RetryPolicy::Retry(maybe_error) => {
                     writeln!(f, "{}", "-".repeat(100))?;
                     writeln!(f, "Attempt {i} ")?;
-                    writeln!(f, "TooManyRepeats: {maybe_error:?}")?;
+                    writeln!(f, "TooManyRetries: {maybe_error:?}")?;
                 }
                 RetryPolicy::Fail(fail) => writeln!(f, "Fail: {fail}")?,
             }

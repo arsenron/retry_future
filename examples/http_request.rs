@@ -1,5 +1,5 @@
-use retry_future::{RetryFuture, ExponentialRetryStrategy, RetryPolicy};
 use reqwest::StatusCode;
+use retry_future::{ExponentialRetryStrategy, RetryFuture, RetryPolicy};
 use std::time::Duration;
 
 #[tokio::main]
@@ -14,12 +14,12 @@ async fn main() -> anyhow::Result<()> {
                 StatusCode::BAD_REQUEST | StatusCode::FORBIDDEN => Err(RetryPolicy::Fail(
                     String::from("Cannot recover from these kind of errors ._."),
                 )),
-                StatusCode::INTERNAL_SERVER_ERROR => Err(RetryPolicy::Repeat(None)),
+                StatusCode::INTERNAL_SERVER_ERROR => Err(RetryPolicy::Retry(None)),
                 // What if authorization server lies us?! Repeat it to be convinced
                 StatusCode::UNAUTHORIZED => {
                     // Get error message as debug info
                     let maybe_response_text = resp.text().await.ok().map(anyhow::Error::msg);
-                    Err(RetryPolicy::Repeat(maybe_response_text))
+                    Err(RetryPolicy::Retry(maybe_response_text))
                 }
                 e => Err(RetryPolicy::Fail(format!("Some unusual error here: {e:?}"))),
             }

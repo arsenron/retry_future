@@ -1,5 +1,5 @@
-use retry_future::{RetryFuture, LinearRetryStrategy, RetryPolicy};
 use reqwest::{IntoUrl, Response, StatusCode};
+use retry_future::{LinearRetryStrategy, RetryFuture, RetryPolicy};
 use std::time::Duration;
 
 async fn make_request<T: IntoUrl>(url: T) -> Result<Response, RetryPolicy<String>> {
@@ -7,7 +7,7 @@ async fn make_request<T: IntoUrl>(url: T) -> Result<Response, RetryPolicy<String
     if resp.status() == StatusCode::BAD_REQUEST {
         Err(RetryPolicy::Fail(String::from("Cannot recover from bad request")))
     } else if resp.status() == StatusCode::INTERNAL_SERVER_ERROR {
-        Err(RetryPolicy::Repeat(None))
+        Err(RetryPolicy::Retry(None))
     } else {
         Ok(resp)
     }

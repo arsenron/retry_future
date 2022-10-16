@@ -20,7 +20,10 @@ pub trait RetryStrategy {
     fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts>;
 }
 
-impl<T> RetryStrategy for &mut T where T: RetryStrategy {
+impl<T> RetryStrategy for &mut T
+where
+    T: RetryStrategy,
+{
     fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts> {
         (*self).check_attempt(attempts_before)
     }

@@ -1,8 +1,8 @@
 # Retry Future
 
-The main purpose of the crate is to repeat `Futures` which may contain complex scenarios such as
-not only handling errors but anything that should be repeated. This may include 
-repeating 500's errors from http requests or repeating something like "pseudo" successes from
+The main purpose of the crate is to retry `Futures` which may contain complex scenarios such as
+not only handling errors but anything that should be retried. This may include 
+retrying 500's errors from http requests or retrying something like "pseudo" successes from
 grpc requests.
 
 For examples, please check `examples/` dir, but here is one:
@@ -22,11 +22,11 @@ async fn main() -> anyhow::Result<()> {
                 StatusCode::BAD_REQUEST | StatusCode::FORBIDDEN => Err(RetryPolicy::Fail(
                     String::from("Cannot recover from these kind of errors ._."),
                 )),
-                StatusCode::INTERNAL_SERVER_ERROR => Err(RetryPolicy::Repeat(None)),
+                StatusCode::INTERNAL_SERVER_ERROR => Err(RetryPolicy::Retry(None)),
                 StatusCode::UNAUTHORIZED => {
-                    // What if authorization server lies us?! Repeat it to be convinced
+                    // What if authorization server lies us?! Retry it to be convinced
                     let maybe_response_text = resp.text().await.ok().map(anyhow::Error::msg);  // debug info
-                    Err(RetryPolicy::Repeat(maybe_response_text))
+                    Err(RetryPolicy::Retry(maybe_response_text))
                 }
                 _ => Err(RetryPolicy::Fail(format!("Some unusual response here: {resp:?}"))),
             }
