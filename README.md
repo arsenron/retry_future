@@ -1,15 +1,16 @@
 # Retry Future
 
 The main purpose of the crate is to retry `Futures` which may contain complex scenarios such as
-not only handling errors but anything that should be retried. This may include 
+not only handling errors but anything that should be retried. This may include
 retrying 500's errors from http requests or retrying something like "pseudo" successes from
 grpc requests.
 
 For examples, please check `examples/` dir, but here is one:
+
 ```rust
 // imports...
 use retry_future::{
-    RetryFuture, RetryPolicy, ExponentialRetryStrategy
+    RetryFuture, RetryPolicy, ExponentialRetryStrategy, Error
 };
 
 #[tokio::main]
@@ -25,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
                 StatusCode::INTERNAL_SERVER_ERROR => Err(RetryPolicy::Retry(None)),
                 StatusCode::UNAUTHORIZED => {
                     // What if authorization server lies us?! Retry it to be convinced
-                    let maybe_response_text = resp.text().await.ok().map(anyhow::Error::msg);  // debug info
+                    let maybe_response_text = resp.text().await.ok().map(Error::msg);  // debug info
                     Err(RetryPolicy::Retry(maybe_response_text))
                 }
                 _ => Err(RetryPolicy::Fail(format!("Some unusual response here: {resp:?}"))),
@@ -33,9 +34,10 @@ async fn main() -> anyhow::Result<()> {
         },
         ExponentialRetryStrategy::new()
             .max_attempts(5)
-            .initial_delay(Duration::from_millis(100)),
+            .initial_delay(Duration::from_millis(100))
+            .retry_early_returned_errors(true),
     )
-    .await?;
+        .await?;
 
     eprintln!("resp = {:#?}", resp);
 
@@ -44,16 +46,14 @@ async fn main() -> anyhow::Result<()> {
 
 ```
 
-
-
 ### License
 
 Licensed under either of
 
- * Apache License, Version 2.0
-   ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license
-   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+* Apache License, Version 2.0
+  ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license
+  ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
 
