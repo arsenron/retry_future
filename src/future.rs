@@ -108,18 +108,12 @@ where
                         let err = retry_future.errors.last().unwrap(); // cannot panic as we just pushed to vec
                         let new_state = match err {
                             RetryPolicy::Retry(maybe_err) => {
-                                if maybe_err
-                                    .as_ref()
-                                    .filter(|e| {
-                                        e.is_early_returned
-                                            && !retry_future
-                                                .retry_strategy
-                                                .retry_early_returned_errors()
-                                    })
-                                    .is_some()
+                                if matches!(maybe_err, Some(e) if e.is_early_returned)
+                                    && !retry_future.retry_strategy.retry_early_returned_errors()
                                 {
-                                    let errors = std::mem::take(retry_future.errors);
-                                    return Poll::Ready(Err(RetryError { errors }));
+                                    return Poll::Ready(Err(RetryError {
+                                        errors: std::mem::take(retry_future.errors),
+                                    }));
                                 }
                                 let check_attempt_result = retry_future
                                     .retry_strategy
@@ -129,14 +123,16 @@ where
                                         FutureState::TimerActive { delay: sleep(duration) }
                                     }
                                     Err(_) => {
-                                        let errors = std::mem::take(retry_future.errors);
-                                        return Poll::Ready(Err(RetryError { errors }));
+                                        return Poll::Ready(Err(RetryError {
+                                            errors: std::mem::take(retry_future.errors),
+                                        }));
                                     }
                                 }
                             }
                             RetryPolicy::Fail(_) => {
-                                let errors = std::mem::take(retry_future.errors);
-                                return Poll::Ready(Err(RetryError { errors }));
+                                return Poll::Ready(Err(RetryError {
+                                    errors: std::mem::take(retry_future.errors),
+                                }));
                             }
                         };
                         *retry_future.attempts_before += 1;
