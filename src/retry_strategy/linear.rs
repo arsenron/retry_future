@@ -5,11 +5,17 @@ use std::time::Duration;
 pub struct LinearRetryStrategy {
     pub max_attempts: usize,
     pub delay_between_repeats: Duration,
+    /// See [RetryStrategy::retry_early_returned_errors](crate::retry_strategy::RetryStrategy::retry_early_returned_errors)
+    pub retry_early_returned_errors: bool,
 }
 
 impl Default for LinearRetryStrategy {
     fn default() -> Self {
-        Self { max_attempts: 5, delay_between_repeats: Duration::from_millis(500) }
+        Self {
+            max_attempts: 5,
+            delay_between_repeats: Duration::from_millis(500),
+            retry_early_returned_errors: true,
+        }
     }
 }
 
@@ -20,6 +26,10 @@ impl RetryStrategy for LinearRetryStrategy {
         } else {
             Ok(self.delay_between_repeats)
         }
+    }
+
+    fn retry_early_returned_errors(&self) -> bool {
+        self.retry_early_returned_errors
     }
 }
 
@@ -35,6 +45,12 @@ impl LinearRetryStrategy {
 
     pub fn delay_between_repeats(mut self, delay_between_repeats: Duration) -> Self {
         self.delay_between_repeats = delay_between_repeats;
+        self
+    }
+
+    /// See [RetryStrategy::retry_early_returned_errors](crate::retry_strategy::RetryStrategy::retry_early_returned_errors)
+    pub fn retry_early_returned_errors(mut self, retry_early_returned_errors: bool) -> Self {
+        self.retry_early_returned_errors = retry_early_returned_errors;
         self
     }
 }

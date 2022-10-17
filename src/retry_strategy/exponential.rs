@@ -11,7 +11,8 @@ use std::time::Duration;
 /// use std::time::Duration;
 ///
 /// let mut strategy = ExponentialRetryStrategy {
-///    base: 3, max_attempts: 5, initial_delay: Duration::from_secs(1)
+///    base: 3,
+///    ..Default::default()
 /// };
 ///
 /// assert_eq!(strategy.check_attempt(0).unwrap(), Duration::from_secs(1));
@@ -27,11 +28,18 @@ pub struct ExponentialRetryStrategy {
     pub base: usize,
     pub max_attempts: usize,
     pub initial_delay: Duration,
+    /// See [RetryStrategy::retry_early_returned_errors](crate::retry_strategy::RetryStrategy::retry_early_returned_errors)
+    pub retry_early_returned_errors: bool,
 }
 
 impl Default for ExponentialRetryStrategy {
     fn default() -> Self {
-        Self { base: 2, max_attempts: 3, initial_delay: Duration::from_millis(500) }
+        Self {
+            base: 2,
+            max_attempts: 3,
+            initial_delay: Duration::from_millis(500),
+            retry_early_returned_errors: true,
+        }
     }
 }
 
@@ -49,6 +57,12 @@ impl ExponentialRetryStrategy {
         self.initial_delay = initial_delay;
         self
     }
+
+    /// See [RetryStrategy::retry_early_returned_errors](crate::retry_strategy::RetryStrategy::retry_early_returned_errors)
+    pub fn retry_early_returned_errors(mut self, retry_early_returned_errors: bool) -> Self {
+        self.retry_early_returned_errors = retry_early_returned_errors;
+        self
+    }
 }
 
 impl RetryStrategy for ExponentialRetryStrategy {
@@ -60,6 +74,10 @@ impl RetryStrategy for ExponentialRetryStrategy {
             Ok(self.initial_delay * exponent as u32)
         }
     }
+
+    fn retry_early_returned_errors(&self) -> bool {
+        self.retry_early_returned_errors
+    }
 }
 
 #[cfg(test)]
@@ -68,11 +86,7 @@ mod tests {
 
     #[test]
     fn check_exponent() {
-        let mut strategy = ExponentialRetryStrategy {
-            base: 2,
-            max_attempts: 5,
-            initial_delay: Duration::from_secs(1),
-        };
+        let mut strategy = ExponentialRetryStrategy { base: 2, ..Default::default() };
         assert_eq!(strategy.check_attempt(0).unwrap(), Duration::from_secs(1));
         assert_eq!(strategy.check_attempt(1).unwrap(), Duration::from_secs(2));
         assert_eq!(strategy.check_attempt(2).unwrap(), Duration::from_secs(4));

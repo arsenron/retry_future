@@ -68,6 +68,7 @@ where
 impl<F, E, RS> RetryFuture<F, E, RS>
 where
     F: FutureFactory<E>,
+    RS: RetryStrategy,
 {
     /// [FutureFactory](FutureFactory) has a blanket implementation
     /// for FnMut closures. This means that you can pass a closure instead

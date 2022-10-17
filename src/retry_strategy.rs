@@ -19,9 +19,9 @@ pub trait RetryStrategy {
     /// was trying to resolve to `Ok(_)` after returning `Err(_)`.
     fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts>;
 
-    fn retry_early_returned_errors(&self) -> bool {
-        true
-    }
+    /// If `true`, errors propagated using `?` inside a [future](crate::future::FutureFactory::Future)
+    /// will be retried.
+    fn retry_early_returned_errors(&self) -> bool;
 }
 
 impl<T> RetryStrategy for &mut T
@@ -30,5 +30,9 @@ where
 {
     fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts> {
         (*self).check_attempt(attempts_before)
+    }
+
+    fn retry_early_returned_errors(&self) -> bool {
+        (**self).retry_early_returned_errors()
     }
 }

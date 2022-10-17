@@ -5,7 +5,7 @@ use std::time::Duration;
 async fn main() -> anyhow::Result<()> {
     let text = RetryFuture::new(
         || async {
-            Ok::<_, RetryPolicy>(reqwest::get("http://localhost:8084").await?.text().await?)
+            Ok::<_, RetryPolicy>(reqwest::get("http://localhost:8085").await?.text().await?)
         },
         LinearRetryStrategy::default()
             .max_attempts(10)
