@@ -14,15 +14,15 @@ async fn main() -> anyhow::Result<()> {
                 }
                 StatusCode::INTERNAL_SERVER_ERROR => retry!(),
                 StatusCode::UNAUTHORIZED => {
-                    let response_text = resp.text().await?;
-                    retry!(response_text)
+                    retry!(resp.text().await?)
                 }
-                e => fail!(format!("Some unusual statusc code here: {e:?}")),
+                e => fail!(format!("Some unusual status code here: {e:?}")),
             }
         },
         ExponentialRetryStrategy::default()
             .max_attempts(5)
-            .initial_delay(Duration::from_millis(100)),
+            .initial_delay(Duration::from_millis(100))
+            .retry_early_returned_errors(false),
     )
     .await?;
 

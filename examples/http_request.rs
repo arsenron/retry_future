@@ -15,7 +15,7 @@ async fn main() -> anyhow::Result<()> {
                     String::from("Cannot recover from these kind of errors ._."),
                 )),
                 StatusCode::INTERNAL_SERVER_ERROR => Err(RetryPolicy::Retry(None)),
-                // What if authorization server lies us?! Repeat it to be convinced
+                // What if authorization server lies us?! Retry it to be convinced
                 StatusCode::UNAUTHORIZED => {
                     // Get error message as debug info
                     let maybe_response_text = resp.text().await.ok().map(retry_future::Error::msg);

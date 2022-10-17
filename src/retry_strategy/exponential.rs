@@ -11,8 +11,10 @@ use std::time::Duration;
 /// use std::time::Duration;
 ///
 /// let mut strategy = ExponentialRetryStrategy {
-///    base: 3,
-///    ..Default::default()
+///     base: 3,
+///     max_attempts: 5,
+///     initial_delay: Duration::from_secs(1),
+///     ..Default::default()
 /// };
 ///
 /// assert_eq!(strategy.check_attempt(0).unwrap(), Duration::from_secs(1));
@@ -86,7 +88,12 @@ mod tests {
 
     #[test]
     fn check_exponent() {
-        let mut strategy = ExponentialRetryStrategy { base: 2, ..Default::default() };
+        let mut strategy = ExponentialRetryStrategy {
+            base: 2,
+            initial_delay: Duration::from_secs(1),
+            max_attempts: 5,
+            ..Default::default()
+        };
         assert_eq!(strategy.check_attempt(0).unwrap(), Duration::from_secs(1));
         assert_eq!(strategy.check_attempt(1).unwrap(), Duration::from_secs(2));
         assert_eq!(strategy.check_attempt(2).unwrap(), Duration::from_secs(4));

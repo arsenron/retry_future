@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
     let resp = RetryFuture::new(
         || make_request(url),
         LinearRetryStrategy::default()
-            .delay_between_repeats(Duration::from_secs(5))
+            .delay_between_retries(Duration::from_secs(5))
             .max_attempts(2),
     )
     .await?;

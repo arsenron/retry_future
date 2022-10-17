@@ -4,7 +4,7 @@ use std::time::Duration;
 /// Simple retry strategy that is retrying futures after [Duration](std::time::Duration)
 pub struct LinearRetryStrategy {
     pub max_attempts: usize,
-    pub delay_between_repeats: Duration,
+    pub delay_between_retries: Duration,
     /// See [RetryStrategy::retry_early_returned_errors](crate::retry_strategy::RetryStrategy::retry_early_returned_errors)
     pub retry_early_returned_errors: bool,
 }
@@ -13,7 +13,7 @@ impl Default for LinearRetryStrategy {
     fn default() -> Self {
         Self {
             max_attempts: 5,
-            delay_between_repeats: Duration::from_millis(500),
+            delay_between_retries: Duration::from_millis(500),
             retry_early_returned_errors: true,
         }
     }
@@ -24,7 +24,7 @@ impl RetryStrategy for LinearRetryStrategy {
         if self.max_attempts == attempts_before {
             Err(TooManyAttempts)
         } else {
-            Ok(self.delay_between_repeats)
+            Ok(self.delay_between_retries)
         }
     }
 
@@ -43,8 +43,8 @@ impl LinearRetryStrategy {
         self
     }
 
-    pub fn delay_between_repeats(mut self, delay_between_repeats: Duration) -> Self {
-        self.delay_between_repeats = delay_between_repeats;
+    pub fn delay_between_retries(mut self, delay_between_retries: Duration) -> Self {
+        self.delay_between_retries = delay_between_retries;
         self
     }
 

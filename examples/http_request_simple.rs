@@ -9,7 +9,7 @@ async fn main() -> anyhow::Result<()> {
         },
         LinearRetryStrategy::default()
             .max_attempts(10)
-            .delay_between_repeats(Duration::from_millis(100)),
+            .delay_between_retries(Duration::from_millis(100)),
     )
     .await?;
 

@@ -1,6 +1,8 @@
 use crate::RetryPolicy;
 use std::fmt::{Debug, Display, Formatter};
 
+/// Used in [retry policy](crate::RetryPolicy) inside
+/// `Retry` variant
 pub struct Error {
     pub error: anyhow::Error,
     pub(crate) is_early_returned: bool,

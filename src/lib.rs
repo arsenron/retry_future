@@ -1,4 +1,4 @@
-mod error;
+pub mod error;
 mod future;
 mod retry_strategy;
 
@@ -15,11 +15,10 @@ use std::fmt::Debug;
 /// `Fail` variant means unrecoverable error
 ///
 /// If `future` propagates errors early by using `?` then
-/// `Retry` will contain [anyhow error](anyhow::Error) inside it.
+/// `Retry` will contain [error](error::Error) inside it.
 ///
 /// If you want to provide some debug information about
-/// why a `future` failed, you can construct [anyhow error](anyhow::Error)
-/// yourself, such as `RetryPolicy::Retry(Some(anyhow!("I failed here!")))`
+/// why a `Future` failed, you can construct [error](error::Error) youself.
 #[derive(Debug)]
 pub enum RetryPolicy<E = String> {
     Retry(Option<Error>),
@@ -43,13 +42,10 @@ macro_rules! fail {
 }
 
 /// Return early with [RetryPolicy::Retry](crate::RetryPolicy::Retry)
-///
-/// Inside `repeat` if `arg` is provided, it will be wrapped by `anyhow::anyhow!` macro
-/// so you may omit creating an [anyhow error][anyhow::Error] yourself.
 #[macro_export]
 macro_rules! retry {
     ($e:expr) => {
-        return Err(RetryPolicy::Retry(Some(anyhow::anyhow!($e))))
+        return Err(RetryPolicy::Retry(Some($crate::error::Error::msg($e))))
     };
 
     () => {
@@ -71,6 +67,10 @@ mod tests {
     impl RetryStrategy for PanicingRetryStrategy {
         fn check_attempt(&mut self, _attempts_before: usize) -> Result<Duration, TooManyAttempts> {
             panic!()
+        }
+
+        fn retry_early_returned_errors(&self) -> bool {
+            true
         }
     }
 
