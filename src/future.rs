@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -91,6 +92,7 @@ impl<F, E, RS> Future for RetryFuture<F, E, RS>
 where
     F: FutureFactory<E>,
     RS: RetryStrategy,
+    E: Debug,
 {
     type Output = Result<<<F as FutureFactory<E>>::Future as TryFuture>::Ok, RetryError<E>>;
 
@@ -104,6 +106,8 @@ where
                         return Poll::Ready(Ok(t));
                     }
                     Err(err) => {
+                        #[cfg(feature = "log")]
+                        log::trace!("Error returned from future - {err:?}");
                         retry_future.errors.push(err);
                         let err = retry_future.errors.last().unwrap(); // cannot panic as we just pushed to vec
                         let new_state = match err {

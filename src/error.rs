@@ -28,10 +28,16 @@ impl Error {
 /// when we await [RetryFuture](crate::RetryFuture), the returned type is `Result<T, RetryError<E>>`
 ///
 /// This type accumulates all errors that happen inside inner future.
-/// That means that after a future failed to resolve to Ok(_),
-/// then an error is pushed to `errors` Vec
+/// This means that after a future fails to resolve to Ok(_), an error is pushed to `errors` Vec
 pub struct RetryError<E> {
     pub errors: Vec<RetryPolicy<E>>,
+}
+
+impl<E> RetryError<E> {
+    /// Returns the last error encountered
+    pub fn last_error(&self) -> Option<&RetryPolicy<E>> {
+        self.errors.last()
+    }
 }
 
 impl<E: Display> Display for RetryError<E> {
