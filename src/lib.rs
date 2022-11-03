@@ -37,7 +37,7 @@ impl<E, T: Into<anyhow::Error>> From<T> for RetryPolicy<E> {
 #[macro_export]
 macro_rules! fail {
     ($e:expr) => {
-        return Err(RetryPolicy::Fail($e))
+        return Err($crate::RetryPolicy::Fail($e))
     };
 }
 
@@ -45,11 +45,11 @@ macro_rules! fail {
 #[macro_export]
 macro_rules! retry {
     ($e:expr) => {
-        return Err(RetryPolicy::Retry(Some($crate::error::Error::msg($e))))
+        return Err($crate::RetryPolicy::Retry(Some($crate::error::Error::msg($e))))
     };
 
     () => {
-        return Err(RetryPolicy::Retry(None))
+        return Err($crate::RetryPolicy::Retry(None))
     };
 }
 

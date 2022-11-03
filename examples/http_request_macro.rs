@@ -1,5 +1,5 @@
 use reqwest::StatusCode;
-use retry_future::{fail, retry, ExponentialRetryStrategy, RetryFuture, RetryPolicy};
+use retry_future::{fail, retry, ExponentialRetryStrategy, RetryFuture};
 use std::time::Duration;
 
 #[tokio::main]
