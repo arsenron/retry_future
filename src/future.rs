@@ -11,6 +11,7 @@ use crate::error::RetryError;
 use crate::retry_strategy::RetryStrategy;
 use crate::RetryPolicy;
 
+
 #[pin_project(project = FutureStateProj)]
 enum FutureState<Fut> {
     WaitingForFuture {
@@ -31,7 +32,7 @@ enum FutureState<Fut> {
 /// [RetryStrategy](crate::retry_strategy::RetryStrategy) trait
 /// which is responsible for configuring retry mechanism
 #[pin_project]
-pub struct RetryFuture<F, Fut, E, RS> {
+pub struct RetryFuture<F, Fut, RS, E> {
     factory: F,
     retry_strategy: RS,
     attempts_before: usize,
@@ -40,7 +41,7 @@ pub struct RetryFuture<F, Fut, E, RS> {
     errors: Vec<RetryPolicy<E>>,
 }
 
-impl<F, Fut, E, RS> RetryFuture<F, Fut, E, RS>
+impl<F, Fut, RS, E> RetryFuture<F, Fut, RS, E>
 where
     F: Unpin + FnMut() -> Fut,
 {
@@ -56,7 +57,7 @@ where
     }
 }
 
-impl<F, Fut, E, RS> Future for RetryFuture<F, Fut, E, RS>
+impl<F, Fut, RS, E> Future for RetryFuture<F, Fut, RS, E>
 where
     F: Unpin + FnMut() -> Fut,
     Fut: TryFuture<Error = RetryPolicy<E>>,
