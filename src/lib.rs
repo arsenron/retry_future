@@ -3,7 +3,7 @@ mod future;
 mod retry_strategy;
 
 pub use error::{Error, RetryError, TooManyAttempts};
-pub use future::{FutureFactory, RetryFuture};
+pub use future::RetryFuture;
 pub use retry_strategy::{
     ExponentialRetryStrategy, InfiniteRetryStrategy, LinearRetryStrategy, RetryStrategy,
 };

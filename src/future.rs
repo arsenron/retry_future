@@ -11,29 +11,6 @@ use crate::error::RetryError;
 use crate::retry_strategy::RetryStrategy;
 use crate::RetryPolicy;
 
-/// Used in [RetryFuture](crate::RetryFuture) to spawn
-/// a new future in case it did not resolve to `Ok(_)`
-///
-/// If a future fails, then it's internal state is undefined
-/// thats why we need to create a new future.
-pub trait FutureFactory<E> {
-    type Future: TryFuture<Error = RetryPolicy<E>>;
-
-    fn spawn(&mut self) -> Self::Future;
-}
-
-impl<T, Fut, E> FutureFactory<E> for T
-where
-    T: Unpin + FnMut() -> Fut,
-    Fut: TryFuture<Error = RetryPolicy<E>>,
-{
-    type Future = Fut;
-
-    fn spawn(&mut self) -> Fut {
-        self()
-    }
-}
-
 #[pin_project(project = FutureStateProj)]
 enum FutureState<Fut> {
     WaitingForFuture {
@@ -54,30 +31,21 @@ enum FutureState<Fut> {
 /// [RetryStrategy](crate::retry_strategy::RetryStrategy) trait
 /// which is responsible for configuring retry mechanism
 #[pin_project]
-pub struct RetryFuture<F, E, RS>
-where
-    F: FutureFactory<E>,
-{
+pub struct RetryFuture<F, Fut, E, RS> {
     factory: F,
     retry_strategy: RS,
     attempts_before: usize,
     #[pin]
-    state: FutureState<F::Future>,
+    state: FutureState<Fut>,
     errors: Vec<RetryPolicy<E>>,
 }
 
-impl<F, E, RS> RetryFuture<F, E, RS>
+impl<F, Fut, E, RS> RetryFuture<F, Fut, E, RS>
 where
-    F: FutureFactory<E>,
-    RS: RetryStrategy,
+    F: Unpin + FnMut() -> Fut,
 {
-    /// [FutureFactory](FutureFactory) has a blanket implementation
-    /// for FnMut closures. This means that you can pass a closure instead
-    /// of implementing [FutureFactory](FutureFactory) for your type.
-    ///
-    /// See examples to understand how to use this.
     pub fn new(mut factory: F, retry_strategy: RS) -> Self {
-        let future = factory.spawn();
+        let future = factory();
         Self {
             factory,
             retry_strategy,
@@ -88,13 +56,14 @@ where
     }
 }
 
-impl<F, E, RS> Future for RetryFuture<F, E, RS>
+impl<F, Fut, E, RS> Future for RetryFuture<F, Fut, E, RS>
 where
-    F: FutureFactory<E>,
-    RS: RetryStrategy,
+    F: Unpin + FnMut() -> Fut,
+    Fut: TryFuture<Error = RetryPolicy<E>>,
     E: Debug,
+    RS: RetryStrategy,
 {
-    type Output = Result<<<F as FutureFactory<E>>::Future as TryFuture>::Ok, RetryError<E>>;
+    type Output = Result<Fut::Ok, RetryError<E>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         loop {
@@ -145,7 +114,7 @@ where
                 },
                 FutureStateProj::TimerActive { delay } => {
                     ready!(delay.poll(cx));
-                    FutureState::WaitingForFuture { future: retry_future.factory.spawn() }
+                    FutureState::WaitingForFuture { future: (retry_future.factory)() }
                 }
             };
 
