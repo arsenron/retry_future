@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
         ExponentialRetryStrategy::default()
             .max_attempts(5)
             .initial_delay(Duration::from_millis(100))
-            .retry_early_returned_errors(false),
+            .retry_early_returned_errors(false),  // abort on early errors, i.e. "?"
     )
     .await?;
 

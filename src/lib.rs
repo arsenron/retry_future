@@ -62,15 +62,23 @@ mod tests {
     };
     use std::time::Duration;
 
-    struct PanicingRetryStrategy;
+    struct MyRetryStrategy {
+        max_attempts: usize,
+        counter: Vec<u8>,
+    }
 
-    impl RetryStrategy for PanicingRetryStrategy {
-        fn check_attempt(&mut self, _attempts_before: usize) -> Result<Duration, TooManyAttempts> {
-            panic!()
+    impl RetryStrategy for MyRetryStrategy {
+        fn check_attempt(&mut self, attempts_before: usize) -> Result<Duration, TooManyAttempts> {
+            if self.max_attempts == attempts_before {
+                Err(TooManyAttempts)
+            } else {
+                self.counter.push(0);
+                Ok(Duration::from_millis(1))
+            }
         }
 
         fn retry_early_returned_errors(&self) -> bool {
-            true
+            false
         }
     }
 
@@ -78,18 +86,44 @@ mod tests {
     async fn test_ok() {
         let f = RetryFuture::new(
             || ok::<_, u8>(255).map_err(|_| RetryPolicy::Fail("fail!")),
-            PanicingRetryStrategy,
+            MyRetryStrategy { max_attempts: 5, counter: vec![] },
         );
         assert_eq!(255, f.await.unwrap());
     }
 
     #[tokio::test]
     async fn test_fail() {
-        let f = RetryFuture::new(|| err::<u8, _>(RetryPolicy::Fail("fail")), PanicingRetryStrategy);
-        if let RetryPolicy::Fail(_) = f.await.unwrap_err().errors.last().unwrap() {
-            // ok
-        } else {
+        let f = RetryFuture::new(
+            || err::<u8, _>(RetryPolicy::Fail("fail")),
+            MyRetryStrategy { max_attempts: 2, counter: vec![] },
+        );
+        let RetryPolicy::Fail(_) = f.await.unwrap_err().errors.last().unwrap() else {
             panic!("Fail error must be returned")
-        }
+        };
+    }
+
+    #[tokio::test]
+    async fn test_number_of_attempts() {
+        let mut retry_strategy = MyRetryStrategy { max_attempts: 7, counter: vec![] };
+        assert_eq!(0, retry_strategy.counter.len());
+        let f = RetryFuture::new(
+            || err::<u8, RetryPolicy>(RetryPolicy::Retry(None)),
+            &mut retry_strategy,
+        );
+        f.await.unwrap_err();
+        assert_eq!(7, retry_strategy.counter.len())
+    }
+
+    #[tokio::test]
+    async fn test_return_early() {
+        let mut retry_strategy = MyRetryStrategy { max_attempts: 7, counter: vec![] };
+        let f = RetryFuture::new(
+            || async {
+                Ok::<_, RetryPolicy>("non-integer".parse::<u32>()?)
+            },
+            &mut retry_strategy,
+        );
+        f.await.unwrap_err();
+        assert_eq!(0, retry_strategy.counter.len())
     }
 }
