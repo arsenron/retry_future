@@ -1,3 +1,8 @@
+//! The main purpose of the crate is to retry `Futures` which may contain complex scenarios such as
+//! not only handling errors but anything that should be retried. This may include
+//! retrying 500's errors from http requests or retrying something like "pseudo" successes from
+//! grpc requests.
+
 pub mod error;
 mod future;
 mod retry_strategy;
@@ -118,9 +123,7 @@ mod tests {
     async fn test_return_early() {
         let mut retry_strategy = MyRetryStrategy { max_attempts: 7, counter: vec![] };
         let f = RetryFuture::new(
-            || async {
-                Ok::<_, RetryPolicy>("non-integer".parse::<u32>()?)
-            },
+            || async { Ok::<_, RetryPolicy>("non-integer".parse::<u32>()?) },
             &mut retry_strategy,
         );
         f.await.unwrap_err();
