@@ -11,31 +11,40 @@ use std::pin::Pin;
 async fn main() -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     // You can opt for your defaults
-    let get = client.get("https://google.com").retry(ExponentialRetryStrategy::default()).await?;
+    let get = client
+        .get("https://google.com")
+        .with_retry_strategy(ExponentialRetryStrategy::default())
+        .await?;
     eprintln!("get = {:#?}", get);
 
     let post = client
         .post("http://example.com")
         .body(String::from("hello!"))
-        .retry(LinearRetryStrategy::default())
+        .with_retry_strategy(LinearRetryStrategy::default())
         .await?;
     eprintln!("post = {:#?}", post);
 
     Ok(())
 }
 
-trait Retry {
-    fn retry<RS: RetryStrategy + 'static>(
+trait WithRetryStrategy {
+    type Ok;
+    type Err;
+
+    fn with_retry_strategy<RS: RetryStrategy + 'static>(
         self,
         retry_strategy: RS,
-    ) -> Pin<Box<dyn Future<Output = Result<Response, RetryError<Response>>>>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Self::Ok, RetryError<Self::Err>>>>>;
 }
 
-impl Retry for RequestBuilder {
-    fn retry<RS: RetryStrategy + 'static>(
+impl WithRetryStrategy for RequestBuilder {
+    type Ok = Response;
+    type Err = Response;
+
+    fn with_retry_strategy<RS: RetryStrategy + 'static>(
         self,
         retry_strategy: RS,
-    ) -> Pin<Box<dyn Future<Output = Result<Response, RetryError<Response>>>>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Self::Ok, RetryError<Self::Err>>>>> {
         Box::pin(async move {
             RetryFuture::new(
                 || async {
