@@ -11,7 +11,6 @@ use crate::error::RetryError;
 use crate::retry_strategy::RetryStrategy;
 use crate::RetryPolicy;
 
-
 #[pin_project(project = FutureStateProj)]
 enum FutureState<Fut> {
     WaitingForFuture {
@@ -43,7 +42,7 @@ pub struct RetryFuture<F, Fut, RS, E> {
 
 impl<F, Fut, RS, E> RetryFuture<F, Fut, RS, E>
 where
-    F: Unpin + FnMut() -> Fut,
+    F: FnMut() -> Fut,
 {
     pub fn new(mut factory: F, retry_strategy: RS) -> Self {
         let future = factory();
@@ -59,7 +58,7 @@ where
 
 impl<F, Fut, RS, E> Future for RetryFuture<F, Fut, RS, E>
 where
-    F: Unpin + FnMut() -> Fut,
+    F: FnMut() -> Fut,
     Fut: TryFuture<Error = RetryPolicy<E>>,
     E: Debug,
     RS: RetryStrategy,
